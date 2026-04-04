@@ -12,7 +12,6 @@ export function StatsBar(props: {
   selectedHandNumber: number | null;
   onSelectHand: (handNumber: number) => void;
   totalTransacted: number;
-  live: boolean;
   loopRunning: boolean;
   turboMode: boolean;
   paymentMode: "real" | "mock_degraded";
@@ -69,16 +68,6 @@ export function StatsBar(props: {
       </div>
       <div className="flex items-center gap-2 font-mono text-sm shrink-0">
         <span className="text-stack">${props.totalTransacted.toFixed(2)} total USDC (est.)</span>
-        <span className="flex items-center gap-2">
-          {props.live && (
-            <motion.span
-              className="inline-block h-2 w-2 rounded-full bg-green-500"
-              animate={{ opacity: [1, 0.4, 1] }}
-              transition={{ repeat: Infinity, duration: 1.2 }}
-            />
-          )}
-          LIVE
-        </span>
         {props.paymentMode === "mock_degraded" ? (
           <span className="rounded border border-amber-300/60 bg-amber-500/10 px-2 py-1 text-[11px] text-amber-200">
             PAYMENTS: MOCK DEGRADED

@@ -125,7 +125,6 @@ export default function App() {
           selectedHandNumber={selectedHandNumber}
           onSelectHand={setSelectedHandNumber}
           totalTransacted={socket.totalTransacted}
-          live={socket.connected}
           loopRunning={running}
           gameState={socket.gameState}
           onStart={startGame}
