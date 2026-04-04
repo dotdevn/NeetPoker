@@ -1,0 +1,23 @@
+{
+  "name": "neet-poker",
+  "private": true,
+  "workspaces": [
+    "server",
+    "dashboard"
+  ],
+  "scripts": {
+    "dev": "concurrently -n server,dash -c blue,green \"npm run dev -w server\" \"npm run dev -w dashboard\"",
+    "build": "npm run build -w server && npm run build -w dashboard",
+    "check:secrets": "bash scripts/check-secrets.sh repo",
+    "check:secrets:repo": "bash scripts/check-secrets.sh repo",
+    "check:secrets:local": "bash scripts/check-secrets.sh local",
+    "check:release": "bash scripts/check-release-tree.sh",
+    "setup": "bash scripts/setup.sh",
+    "gen-wallets": "cd server && npx tsx ../scripts/gen-test-wallets.ts",
+    "check-balances": "bash scripts/check-balances.sh",
+    "ows": "ows"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

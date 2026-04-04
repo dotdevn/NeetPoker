@@ -1,0 +1,33 @@
+{
+  "name": "server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@open-wallet-standard/core": "^1.2.0",
+    "@x402/core": "^2.9.0",
+    "@x402/evm": "^2.9.0",
+    "@x402/express": "^2.9.0",
+    "@x402/fetch": "^2.9.0",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "express-rate-limit": "^8.3.2",
+    "helmet": "^8.1.0",
+    "openai": "^4.77.0",
+    "pokersolver": "^2.1.4",
+    "viem": "^2.47.0",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.10.0",
+    "@types/ws": "^8.5.13",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}

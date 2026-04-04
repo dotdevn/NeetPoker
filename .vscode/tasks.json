@@ -1,0 +1,25 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "server:dev",
+      "type": "shell",
+      "command": "npm run dev -w server",
+      "group": "build",
+      "presentation": { "reveal": "always", "panel": "dedicated" }
+    },
+    {
+      "label": "dashboard:dev",
+      "type": "shell",
+      "command": "npm run dev -w dashboard",
+      "group": "build",
+      "presentation": { "reveal": "always", "panel": "dedicated" }
+    },
+    {
+      "label": "game:start",
+      "type": "shell",
+      "command": "curl -s -X POST http://localhost:8000/game/start",
+      "group": "none"
+    }
+  ]
+}
