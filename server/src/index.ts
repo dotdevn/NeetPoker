@@ -567,7 +567,7 @@ async function main(): Promise<void> {
     } else if (typeof addr === "string") {
       console.log(`Bound address ${addr}`);
     }
-    console.log("🃏 NeetPoker — AI Poker Tournament");
+    console.log("🃏 NeetPoker — AI Poker Tournament ");
     console.log("─".repeat(50));
     for (const agent of AGENTS) {
       const baseUrl = resolveBaseUrl(agent);
