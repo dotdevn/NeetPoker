@@ -37,7 +37,7 @@ function csv(name: string, fallback: string[]): string[] {
   if (!raw || raw.trim() === "") return fallback;
   return raw
     .split(",")
-    .map((part) => part.trim())
+    .map((part) => part.trim().replace(/^['"]|['"]$/g, "").replace(/\/$/, "")) // strip quotes and trailing slashes
     .filter(Boolean);
 }
 
