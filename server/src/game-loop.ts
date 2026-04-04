@@ -1,8 +1,6 @@
 import { appConfig } from "./config.js";
 import type { AgentId } from "./config.js";
-// @ts-expect-error no types — CJS default export
-import pokersolver from "pokersolver";
-const { Hand } = pokersolver;
+import { createRequire } from "node:module";
 import { getAgentAction, type AgentDecision, type ThinkingContext } from "./llm-agent.js";
 import {
   monteCarloEquity,
@@ -15,6 +13,9 @@ import { agentPayToPot, buildTransactionInfo, potPayToWinner } from "./x402-setu
 import { applyGameAction, previewGameAction, serializeState, type GameActionBody } from "./game-actions.js";
 import type { HandResultPayload, TransactionInfo } from "./types.js";
 import type { PokerEngineState } from "./poker-engine.js";
+
+const require = createRequire(import.meta.url);
+const { Hand } = require("pokersolver");
 
 let running = false;
 let shouldStop = false;

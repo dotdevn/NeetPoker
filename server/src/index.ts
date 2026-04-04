@@ -28,8 +28,17 @@ import {
 import { broadcast, setBroadcaster, engine, resetTournament } from "./game-state.js";
 import { isRunning, startLoop, stopLoop, stopLoopAndWait } from "./game-loop.js";
 
+process.on("uncaughtException", (error) => {
+  console.error("Uncaught exception:", error);
+  process.exit(1);
+});
+
+process.on("unhandledRejection", (reason) => {
+  console.error("Unhandled rejection:", reason);
+  process.exit(1);
+});
+
 const network = appConfig.network as Network;
-const payTo = getPotAddress();
 const ORIGINAL_ACTION_DELAY = defaultDelays.actionDelayMs;
 const ORIGINAL_HAND_DELAY = defaultDelays.handDelayMs;
 const ORIGINAL_LLM_TIMEOUT = appConfig.llmTimeoutMs;
@@ -38,47 +47,6 @@ const MAX_USDC_ACTION_AMOUNT = 1_000_000;
 
 const AGENT_ID_SET = new Set(AGENTS.map((agent) => agent.id));
 const ACTION_SET = new Set(["blind", "fold", "check", "call", "raise"] as const);
-
-const routes = {
-  "POST /game/action": {
-    accepts: {
-      scheme: "exact",
-      price: async (ctx: HTTPRequestContext) => {
-        const body = validateGameActionBody(ctx.adapter.getBody?.());
-        if (!body) return "$0.000000";
-        const policyError = validateGameActionPolicy(body, { allowBlind: false, enforceTurn: true });
-        if (policyError) return "$0.000000";
-        const preview = previewGameAction(body, { allowBlind: false, enforceTurn: true });
-        const a = Number.isFinite(preview?.amount) ? preview?.amount ?? 0 : 0;
-        return `$${a.toFixed(6)}` as `${string}`;
-      },
-      payTo,
-      network,
-    },
-    description: "THE $10 TABLE — poker action (USDC to pot)",
-  },
-};
-
-const facilitator = new HTTPFacilitatorClient({
-  url: appConfig.x402FacilitatorUrl,
-});
-
-const resourceServer = new x402ResourceServer(facilitator).register(
-  network,
-  new ExactEvmScheme(),
-);
-
-const httpServer = new x402HTTPResourceServer(resourceServer, routes);
-
-httpServer.onProtectedRequest(async (ctx) => {
-  const body = validateGameActionBody(ctx.adapter.getBody?.());
-  if (!body) return { grantAccess: true };
-  const policyError = validateGameActionPolicy(body, { allowBlind: false, enforceTurn: true });
-  if (policyError) return { grantAccess: true };
-  const preview = previewGameAction(body, { allowBlind: false, enforceTurn: true });
-  if (!preview || preview.amount === 0) return { grantAccess: true };
-  return;
-});
 
 function extractAdminTokenFromRequest(req: express.Request): string {
   const bearer = req.headers.authorization;
@@ -178,42 +146,31 @@ function ensureStrongTokenOrFail(name: string, value: string): void {
 }
 
 async function main(): Promise<void> {
+  console.log("Startup diagnostics");
+  console.log(`  PORT: ${appConfig.port}`);
+  console.log(`  MOCK_PAYMENTS: ${appConfig.mockPayments ? "enabled" : "disabled"}`);
+  console.log(`  Node.js: ${process.version}`);
+  console.log(`  CWD: ${process.cwd()}`);
+
   const gameAdminToken = getGameAdminToken();
   ensureStrongTokenOrFail("GAME_ADMIN_TOKEN (or FEEDBACK_ADMIN_TOKEN fallback)", gameAdminToken);
 
   let x402Ready = false;
-
-  // Always init on-chain signing clients when not in mock mode.
-  // x402 HTTP middleware (facilitator) is only needed for the manual action API.
-  if (!appConfig.mockPayments) {
-    try {
-      initX402Clients();
-      setPaymentBypassMode(false);
-      console.log("On-chain USDC payment clients initialized.");
-    } catch (e) {
-      const reason = e instanceof Error ? e.message : String(e);
-      console.warn(`On-chain client init failed (${reason}); payments will use mock/bypass mode.`);
-      if (!appConfig.allowPaymentBypass) {
-        throw new Error(
-          `On-chain client init failed (${reason}). Set ALLOW_PAYMENT_BYPASS=1 for local mock fallback.`,
-        );
-      }
-      setPaymentBypassMode(true);
-    }
-  }
-
-  // x402 facilitator init is only needed for the manual action API HTTP middleware.
-  if (!appConfig.mockPayments && appConfig.enableManualActionApi) {
-    try {
-      const host = new URL(appConfig.x402FacilitatorUrl).hostname;
-      await lookup(host);
-      await httpServer.initialize();
-      x402Ready = true;
-    } catch (e) {
-      const reason = e instanceof Error ? e.message : String(e);
-      console.warn(`x402 facilitator init failed (${reason}); manual action API will be unavailable.`);
-    }
-  }
+  let payTo = "";
+  let routes: {
+    "POST /game/action": {
+      accepts: {
+        scheme: "exact";
+        price: (ctx: HTTPRequestContext) => Promise<`${string}`>;
+        payTo: string;
+        network: Network;
+      };
+      description: string;
+    };
+  } | null = null;
+  let facilitator: HTTPFacilitatorClient | null = null;
+  let resourceServer: InstanceType<typeof x402ResourceServer> | null = null;
+  let httpServer: InstanceType<typeof x402HTTPResourceServer> | null = null;
 
   // Global fallback limiter for all general traffic
   const globalLimiter = rateLimit({
@@ -244,6 +201,98 @@ async function main(): Promise<void> {
     res.json({ ok: true });
   });
   app.get("/", (_req, res) => res.send("OK"));
+
+  try {
+    try {
+      payTo = getPotAddress();
+    } catch (e) {
+      const reason = e instanceof Error ? e.message : String(e);
+      if (appConfig.mockPayments) {
+        payTo = "0x0000000000000000000000000000000000000000";
+        console.warn(
+          `POT_WALLET_ADDRESS init failed in mock mode (${reason}); using dummy payTo ${payTo}.`,
+        );
+      } else {
+        throw new Error(`POT_WALLET_ADDRESS init failed (${reason})`);
+      }
+    }
+
+    routes = {
+      "POST /game/action": {
+        accepts: {
+          scheme: "exact",
+          price: async (ctx: HTTPRequestContext) => {
+            const body = validateGameActionBody(ctx.adapter.getBody?.());
+            if (!body) return "$0.000000";
+            const policyError = validateGameActionPolicy(body, { allowBlind: false, enforceTurn: true });
+            if (policyError) return "$0.000000";
+            const preview = previewGameAction(body, { allowBlind: false, enforceTurn: true });
+            const a = Number.isFinite(preview?.amount) ? preview?.amount ?? 0 : 0;
+            return `$${a.toFixed(6)}` as `${string}`;
+          },
+          payTo,
+          network,
+        },
+        description: "THE $10 TABLE — poker action (USDC to pot)",
+      },
+    };
+
+    facilitator = new HTTPFacilitatorClient({
+      url: appConfig.x402FacilitatorUrl,
+    });
+
+    resourceServer = new x402ResourceServer(facilitator).register(
+      network,
+      new ExactEvmScheme(),
+    );
+
+    httpServer = new x402HTTPResourceServer(resourceServer, routes);
+
+    httpServer.onProtectedRequest(async (ctx) => {
+      const body = validateGameActionBody(ctx.adapter.getBody?.());
+      if (!body) return { grantAccess: true };
+      const policyError = validateGameActionPolicy(body, { allowBlind: false, enforceTurn: true });
+      if (policyError) return { grantAccess: true };
+      const preview = previewGameAction(body, { allowBlind: false, enforceTurn: true });
+      if (!preview || preview.amount === 0) return { grantAccess: true };
+      return;
+    });
+  } catch (e) {
+    const reason = e instanceof Error ? e.message : String(e);
+    console.warn(`x402 HTTP setup failed (${reason}); manual action API will be unavailable.`);
+  }
+
+  // Always init on-chain signing clients when not in mock mode.
+  // x402 HTTP middleware (facilitator) is only needed for the manual action API.
+  if (!appConfig.mockPayments) {
+    try {
+      initX402Clients();
+      setPaymentBypassMode(false);
+      console.log("On-chain USDC payment clients initialized.");
+    } catch (e) {
+      const reason = e instanceof Error ? e.message : String(e);
+      console.warn(`On-chain client init failed (${reason}); payments will use mock/bypass mode.`);
+      if (!appConfig.allowPaymentBypass) {
+        throw new Error(
+          `On-chain client init failed (${reason}). Set ALLOW_PAYMENT_BYPASS=1 for local mock fallback.`,
+        );
+      }
+      setPaymentBypassMode(true);
+    }
+  }
+
+  // x402 facilitator init is only needed for the manual action API HTTP middleware.
+  if (!appConfig.mockPayments && appConfig.enableManualActionApi && httpServer) {
+    try {
+      const host = new URL(appConfig.x402FacilitatorUrl).hostname;
+      await lookup(host);
+      await httpServer.initialize();
+      x402Ready = true;
+    } catch (e) {
+      const reason = e instanceof Error ? e.message : String(e);
+      console.warn(`x402 facilitator init failed (${reason}); manual action API will be unavailable.`);
+    }
+  }
 
   app.use(helmet());
 
@@ -276,7 +325,7 @@ async function main(): Promise<void> {
   app.use(globalLimiter);
 
   app.use(express.json({ limit: "64kb" }));
-  if (x402Ready && appConfig.enableManualActionApi) {
+  if (x402Ready && appConfig.enableManualActionApi && httpServer) {
     app.use(paymentMiddlewareFromHTTPServer(httpServer, undefined, undefined, false));
   } else {
     app.use((_req, _res, next) => next());

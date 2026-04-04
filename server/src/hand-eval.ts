@@ -1,9 +1,10 @@
-// @ts-expect-error no types — CJS default export
-import pokersolver from "pokersolver";
-const { Hand } = pokersolver;
 import { randomInt } from "node:crypto";
+import { createRequire } from "node:module";
 import { appConfig } from "./config.js";
 export type CardCode = string;
+
+const require = createRequire(import.meta.url);
+const { Hand } = require("pokersolver");
 
 function parseCard(code: CardCode): { rank: number; suit: string } {
   const rankChar = code.slice(0, -1);

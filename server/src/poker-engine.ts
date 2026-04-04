@@ -1,10 +1,11 @@
 import { appConfig } from "./config.js";
 import { SEAT_ORDER, type AgentId } from "./config.js";
 import { randomInt } from "node:crypto";
-// @ts-expect-error no types — CJS default export
-import pokersolver from "pokersolver";
-const { Hand } = pokersolver;
+import { createRequire } from "node:module";
 import type { CardCode } from "./hand-eval.js";
+
+const require = createRequire(import.meta.url);
+const { Hand } = require("pokersolver");
 
 const RANKS = "23456789TJQKA";
 const SUITS = "shdc";
