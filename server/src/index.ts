@@ -499,7 +499,7 @@ async function main(): Promise<void> {
     });
   });
 
-  server.listen(appConfig.port, () => {
+  server.listen(appConfig.port, "0.0.0.0", () => {
     console.log("🃏 NeetPoker — AI Poker Tournament");
     console.log("─".repeat(50));
     for (const agent of AGENTS) {
