@@ -134,7 +134,7 @@ export default function App() {
           onToggleTurbo={toggleTurbo}
           onStop={stopGame}
         />
-        <div className="grid min-h-0 min-w-0 flex-1 grid-cols-[minmax(0,1fr)_minmax(360px,420px)] grid-rows-[minmax(0,1fr)_minmax(160px,24vh)] gap-2 overflow-hidden p-2">
+        <div className="grid min-h-0 min-w-0 flex-1 grid-cols-[minmax(0,1fr)_minmax(360px,420px)] grid-rows-[minmax(0,1fr)_minmax(200px,30vh)] gap-2 overflow-hidden p-2">
           <div className="min-h-0 min-w-0 overflow-hidden rounded-lg border border-white/10">
             <PokerTable gameState={socket.gameState} latestActions={socket.latestActions} />
           </div>

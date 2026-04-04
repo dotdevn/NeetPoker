@@ -127,12 +127,12 @@ export function HandHistoryPanel(props: {
     <section className="flex h-full min-h-0 min-w-0 max-w-full flex-col overflow-hidden rounded-lg bg-black/30 font-mono text-xs">
       {selected ? (
         <>
-          <div className="min-h-0 min-w-0 flex-1 overflow-hidden p-2">
+          <div className="min-h-0 min-w-0 flex-1 overflow-hidden p-1">
             <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded border border-white/10 bg-black/35">
               <div className="relative min-h-0 min-w-0 flex-1">
                 <div
                   ref={scrollContainerRef}
-                  className="min-h-0 min-w-0 h-full overflow-x-auto overflow-y-hidden p-2"
+                  className="min-h-0 min-w-0 h-full overflow-x-auto overflow-y-hidden px-2 py-1"
                 >
                   <div className="flex h-full min-h-0 min-w-max items-stretch gap-2">
                     {thinking.slice(0, 20).map((entry, idx) => {
