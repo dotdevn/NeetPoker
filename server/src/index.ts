@@ -1,6 +1,7 @@
 import { createServer } from "node:http";
 import { lookup } from "node:dns/promises";
 import { timingSafeEqual } from "node:crypto";
+import type { AddressInfo } from "node:net";
 import express from "express";
 import helmet from "helmet";
 import { rateLimit } from "express-rate-limit";
@@ -547,6 +548,9 @@ async function main(): Promise<void> {
   });
 
   const server = createServer(app);
+  server.on("error", (error) => {
+    console.error("HTTP server error:", error);
+  });
 
   const wss = new WebSocketServer({ server, path: "/ws" });
   setBroadcaster((payload) => {
@@ -555,7 +559,14 @@ async function main(): Promise<void> {
     });
   });
 
-  server.listen(appConfig.port, "0.0.0.0", () => {
+  server.listen(appConfig.port, () => {
+    const addr = server.address();
+    if (addr && typeof addr !== "string") {
+      const info = addr as AddressInfo;
+      console.log(`Bound address ${info.address}:${info.port} (${info.family})`);
+    } else if (typeof addr === "string") {
+      console.log(`Bound address ${addr}`);
+    }
     console.log("🃏 NeetPoker — AI Poker Tournament");
     console.log("─".repeat(50));
     for (const agent of AGENTS) {
