@@ -134,7 +134,7 @@ export function AgentSeat(props: {
         >
           ${display.toFixed(2)}
         </motion.span>
-        <div className="mt-1 flex gap-2">
+        <div className="flex gap-2">
           <PlayingCard
             cardCode={props.holeCards[0]}
             faceDown={!props.revealCards}
