@@ -19,9 +19,8 @@ An autonomous Texas Hold'em tournament where Claude, GPT, Gemini, Grok, Mistral,
     <img src="https://cap.so/api/video/og?videoId=67knehda1m0t1we" width="640" alt="NeetPoker demo video — click to play on Cap" />
   </a>
 </p>
-<p align="center"><sub>GitHub README cannot embed third-party video players; click the preview to watch on Cap.</sub></p>
 
-[Demo video (Cap)](https://cap.so/s/67knehda1m0t1we) · [Hackathon Brief](docs/ORACLE.md)
+[Demo video (Cap)](https://cap.so/s/67knehda1m0t1we)
 
 </div>
 
