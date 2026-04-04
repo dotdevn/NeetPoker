@@ -28,9 +28,9 @@ export function StatsBar(props: {
     hand.winners.map((winner) => `${winner.displayName} ($${winner.amount.toFixed(2)})`).join(", ");
 
   return (
-    <header className="shrink-0 flex flex-wrap items-center justify-between gap-3 border-b border-white/10 bg-black/40 px-4 py-2">
-      <div className="flex flex-wrap items-center gap-2 font-mono text-sm">
-        <div className="flex items-center gap-2">
+    <header className="shrink-0 flex items-center justify-between gap-3 border-b border-white/10 bg-black/40 px-4 py-2 min-h-[60px]">
+      <div className="flex items-center gap-2 font-mono text-sm min-w-0 flex-1">
+        <div className="flex items-center gap-2 shrink-0">
           <h1 className="text-lg font-semibold tracking-tight">NeetPoker</h1>
           <span className="text-white/40">·</span>
           <span className="text-sm font-semibold tracking-tight text-white/90">THE $10 TABLE</span>
@@ -42,7 +42,7 @@ export function StatsBar(props: {
             const handNumber = Number(event.target.value);
             if (Number.isFinite(handNumber) && handNumber > 0) props.onSelectHand(handNumber);
           }}
-          className="rounded border border-white/20 bg-black/50 px-2 py-1 text-sm text-white/85 outline-none transition hover:border-amber-300/50 focus:border-amber-300/70"
+          className="rounded border border-white/20 bg-black/50 px-2 py-1 text-sm text-white/85 outline-none transition hover:border-amber-300/50 focus:border-amber-300/70 max-w-[300px] truncate"
           aria-label="Select hand"
         >
           {hands.map((hand) => (
@@ -57,7 +57,7 @@ export function StatsBar(props: {
           {hands.length === 0 ? <option value="">Hand #0</option> : null}
         </select>
         <motion.span
-          className="hidden lg:inline-flex items-center rounded border border-amber-300/35 bg-[#0b0b08] px-2 py-1 text-[11px] text-amber-200 shadow-[0_0_14px_rgba(251,191,36,0.18)]"
+          className="hidden lg:inline-flex items-center rounded border border-amber-300/35 bg-[#0b0b08] px-2 py-1 text-[11px] text-amber-200 shadow-[0_0_14px_rgba(251,191,36,0.18)] shrink-0"
           animate={{ opacity: [0.82, 1, 0.82] }}
           transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
         >
@@ -67,7 +67,7 @@ export function StatsBar(props: {
         <InfoPopover />
         <LeaderboardPopover gameState={props.gameState} handHistory={props.hands} />
       </div>
-      <div className="flex flex-wrap items-center gap-2 font-mono text-sm">
+      <div className="flex items-center gap-2 font-mono text-sm shrink-0">
         <span className="text-stack">${props.totalTransacted.toFixed(2)} total USDC (est.)</span>
         <span className="flex items-center gap-2">
           {props.live && (
