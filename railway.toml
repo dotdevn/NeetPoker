@@ -1,0 +1,7 @@
+[build]
+buildCommand = "npm run build -w server"
+
+[deploy]
+startCommand = "node server/dist/index.js"
+healthcheckPath = "/health"
+healthcheckTimeout = 300

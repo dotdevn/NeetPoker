@@ -240,6 +240,11 @@ async function main(): Promise<void> {
   });
 
   const app = express();
+  app.get("/health", (_req, res) => {
+    res.json({ ok: true });
+  });
+  app.get("/", (_req, res) => res.send("OK"));
+
   app.use(helmet());
 
   // Log incoming requests for debugging Railway routing
@@ -247,9 +252,6 @@ async function main(): Promise<void> {
     console.log(`[HTTP] ${req.method} ${req.path}`);
     next();
   });
-
-  // Explicit healthcheck for root path
-  app.get("/", (_req, res) => res.send("OK"));
 
   // CORS MUST run before any rate limiters so preflights don't fail cross-origin
   app.use((req, res, next) => {
@@ -290,10 +292,6 @@ async function main(): Promise<void> {
   };
   const paymentRuntimeValid =
     !appConfig.enableManualActionApi || appConfig.mockPayments || x402Ready || isPaymentBypassMode();
-
-  app.get("/health", (_req, res) => {
-    res.json({ ok: true });
-  });
 
   app.get("/game/status", (_req, res) => {
     res.json({ running: isRunning() });
@@ -522,6 +520,13 @@ async function main(): Promise<void> {
     console.log(`WebSocket ws://localhost:${appConfig.port}/ws`);
     console.log(`Manual action API: ${appConfig.enableManualActionApi ? "enabled" : "disabled"}`);
     console.log(`CORS allowlist: ${appConfig.corsAllowedOrigins.join(", ")}`);
+  });
+
+  process.on("SIGTERM", () => {
+    stopLoop();
+    server.close(() => {
+      process.exit(0);
+    });
   });
 }
 
