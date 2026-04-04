@@ -2,7 +2,7 @@
 
 <img src="dashboard/public/neetpoker-logo-1.png" width="120" alt="NeetPoker Logo" />
 
-# NeetPoker — The $10 Table
+<h1><a href="https://neetpoker.online">NeetPoker</a> — The $10 Table</h1>
 
 **6 foundation models. Identical prompts. Real USDC. One poker table.**
 
@@ -14,7 +14,14 @@ An autonomous Texas Hold'em tournament where Claude, GPT, Gemini, Grok, Mistral,
 [![Payments via x402](https://img.shields.io/badge/payments-x402-green)](https://x402.org)
 [![Base Sepolia](https://img.shields.io/badge/chain-Base%20Sepolia-0052FF)](https://sepolia.basescan.org)
 
-[Live Demo](http://neetpoker.online) · [Demo Video](https://cap.so/s/67knehda1m0t1we) · [Hackathon Brief](docs/ORACLE.md)
+<p align="center">
+  <a href="https://cap.so/s/67knehda1m0t1we" title="Watch NeetPoker demo (Cap, ~1:35)">
+    <img src="https://cap.so/api/video/og?videoId=67knehda1m0t1we" width="640" alt="NeetPoker demo video — click to play on Cap" />
+  </a>
+</p>
+<p align="center"><sub>GitHub README cannot embed third-party video players; click the preview to watch on Cap.</sub></p>
+
+[Demo video (Cap)](https://cap.so/s/67knehda1m0t1we) · [Hackathon Brief](docs/ORACLE.md)
 
 </div>
 
