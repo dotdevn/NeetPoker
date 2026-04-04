@@ -45,6 +45,7 @@ const ORIGINAL_HAND_DELAY = defaultDelays.handDelayMs;
 const ORIGINAL_LLM_TIMEOUT = appConfig.llmTimeoutMs;
 const MAX_FEEDBACK_LENGTH = 1000;
 const MAX_USDC_ACTION_AMOUNT = 1_000_000;
+const AUTO_STOP_DELAY_MS = 15_000;
 
 const AGENT_ID_SET = new Set(AGENTS.map((agent) => agent.id));
 const ACTION_SET = new Set(["blind", "fold", "check", "call", "raise"] as const);
@@ -198,6 +199,28 @@ async function main(): Promise<void> {
   });
 
   const app = express();
+  let viewerCount = 0;
+  let autoStopTimer: ReturnType<typeof setTimeout> | null = null;
+
+  const clearAutoStopTimer = (): void => {
+    if (autoStopTimer) {
+      clearTimeout(autoStopTimer);
+      autoStopTimer = null;
+    }
+  };
+
+  const scheduleAutoStop = (): void => {
+    clearAutoStopTimer();
+    autoStopTimer = setTimeout(() => {
+      if (viewerCount <= 0 && isRunning()) {
+        console.log("⚠️ No viewers connected for 15s — auto-stopping game loop to save credits.");
+        stopLoop();
+        broadcast({ type: "loop_stopped" });
+      }
+      autoStopTimer = null;
+    }, AUTO_STOP_DELAY_MS);
+  };
+
   app.get("/health", (_req, res) => {
     res.json({ ok: true });
   });
@@ -345,6 +368,10 @@ async function main(): Promise<void> {
 
   app.get("/game/status", (_req, res) => {
     res.json({ running: isRunning() });
+  });
+
+  app.get("/game/viewers", (_req, res) => {
+    res.json({ viewers: viewerCount });
   });
 
   app.post("/game/stop", gameControlLimiter, (_req, res) => {
@@ -559,6 +586,37 @@ async function main(): Promise<void> {
     });
   });
 
+  wss.on("connection", (ws) => {
+    viewerCount += 1;
+    clearAutoStopTimer();
+    console.log(`[WS] Viewer connected (${viewerCount} total)`);
+
+    const currentState = serializeState(engine.state);
+    if (currentState) {
+      ws.send(
+        JSON.stringify({
+          type: "game_state",
+          gameState: currentState,
+          running: isRunning(),
+        }),
+      );
+    }
+
+    ws.on("close", () => {
+      viewerCount = Math.max(0, viewerCount - 1);
+      console.log(`[WS] Viewer disconnected (${viewerCount} remaining)`);
+
+      if (viewerCount <= 0 && isRunning()) {
+        console.log(`[WS] No viewers left — scheduling auto-stop in ${AUTO_STOP_DELAY_MS / 1000}s`);
+        scheduleAutoStop();
+      }
+    });
+
+    ws.on("error", () => {
+      // Error path is followed by close; close handler decrements and schedules if needed.
+    });
+  });
+
   server.listen(appConfig.port, () => {
     const addr = server.address();
     if (addr && typeof addr !== "string") {
@@ -583,6 +641,7 @@ async function main(): Promise<void> {
   });
 
   process.on("SIGTERM", () => {
+    clearAutoStopTimer();
     stopLoop();
     server.close(() => {
       process.exit(0);

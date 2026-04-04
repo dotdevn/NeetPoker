@@ -1,8 +1,18 @@
 import { createHash, randomUUID } from "node:crypto";
+import { getWallet, signAndSend } from "@open-wallet-standard/core";
 import { x402Client } from "@x402/core/client";
 import { registerExactEvmScheme } from "@x402/evm/exact/client";
 import { wrapFetchWithPayment } from "@x402/fetch";
-import { createWalletClient, http, parseUnits } from "viem";
+import {
+  createWalletClient,
+  createPublicClient,
+  encodeFunctionData,
+  http,
+  parseUnits,
+  serializeTransaction,
+  type Address,
+  type Hex,
+} from "viem";
 import { privateKeyToAccount, type PrivateKeyAccount } from "viem/accounts";
 import { baseSepolia } from "viem/chains";
 import { appConfig, AGENT_IDS, getWalletPrivateKey, type AgentId } from "./config.js";
@@ -11,6 +21,8 @@ import { BASESCAN_TX_URL, type TransactionInfo } from "./types.js";
 
 const fetches = new Map<string, typeof fetch>();
 let bypassPayments = false;
+const OWS_CHAIN_ID = "eip155:84532";
+const owsWalletUsableCache = new Map<string, boolean>();
 const USDC_TRANSFER_ABI = [
   {
     type: "function",
@@ -24,8 +36,14 @@ const USDC_TRANSFER_ABI = [
   },
 ] as const;
 
+const publicClient = createPublicClient({
+  chain: baseSepolia,
+  transport: http(appConfig.baseSepoliaRpc()),
+});
+
 export function initX402Clients(): void {
   fetches.clear();
+  owsWalletUsableCache.clear();
   if (appConfig.mockPayments || bypassPayments) return;
 
   const ids = [...AGENT_IDS, "pot"] as const;
@@ -44,6 +62,7 @@ export function initX402Clients(): void {
 
 export function setPaymentBypassMode(enabled: boolean): void {
   bypassPayments = enabled;
+  owsWalletUsableCache.clear();
   if (enabled) fetches.clear();
 }
 
@@ -123,6 +142,37 @@ function isRealTxHash(txHash?: string): boolean {
   return typeof txHash === "string" && /^0x[a-fA-F0-9]{64}$/.test(txHash);
 }
 
+function formatError(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  return String(error);
+}
+
+function canUseOwsWallet(walletName: AgentId | "pot", expectedAddress: Address): boolean {
+  const cached = owsWalletUsableCache.get(walletName);
+  if (cached !== undefined) return cached;
+
+  try {
+    const wallet = getWallet(walletName);
+    const normalizedExpected = expectedAddress.toLowerCase();
+    const matchesAddress = wallet.accounts.some(
+      (account) => account.address.toLowerCase() === normalizedExpected,
+    );
+    if (!matchesAddress) {
+      console.warn(
+        `[payments] OWS wallet "${walletName}" found but address mismatch; falling back to private-key signer.`,
+      );
+    }
+    owsWalletUsableCache.set(walletName, matchesAddress);
+    return matchesAddress;
+  } catch (error) {
+    console.warn(
+      `[payments] OWS wallet "${walletName}" unavailable (${formatError(error)}); falling back to private-key signer.`,
+    );
+    owsWalletUsableCache.set(walletName, false);
+    return false;
+  }
+}
+
 export function buildTransactionInfo(params: {
   from: string;
   to: string;
@@ -135,14 +185,16 @@ export function buildTransactionInfo(params: {
   const hasRealHash = isRealTxHash(params.txHash);
   const txHash =
     params.txHash ??
-    syntheticTxHash({
-      from: params.from,
-      to: params.to,
-      amount: params.amount,
-      status: params.status,
-      action: params.action,
-      handNumber: params.handNumber,
-    });
+    (params.status === "failed"
+      ? ""
+      : syntheticTxHash({
+          from: params.from,
+          to: params.to,
+          amount: params.amount,
+          status: params.status,
+          action: params.action,
+          handNumber: params.handNumber,
+        }));
   const status =
     params.status === "settled" && !hasRealHash ? "pending" : params.status;
   const explorerUrl = hasRealHash ? `${BASESCAN_TX_URL}${txHash}` : undefined;
@@ -161,6 +213,72 @@ export function buildTransactionInfo(params: {
 }
 
 export async function transferUsdc(
+  fromWallet: AgentId | "pot",
+  toAddress: string,
+  amount: number,
+): Promise<string> {
+  const fromAddress = getAddress(fromWallet) as Address;
+  if (!canUseOwsWallet(fromWallet, fromAddress)) {
+    const signer = getSigners().get(fromWallet);
+    if (!signer) {
+      throw new Error(`Missing private-key signer for ${fromWallet}`);
+    }
+    return transferUsdcWithPrivateKey(signer, toAddress, amount);
+  }
+
+  const tokenAmount = parseUnits(amount.toFixed(6), 6);
+  const data = encodeFunctionData({
+    abi: USDC_TRANSFER_ABI,
+    functionName: "transfer",
+    args: [toAddress as Address, tokenAmount],
+  });
+
+  const [chainId, nonce, gas, fees] = await Promise.all([
+    publicClient.getChainId(),
+    publicClient.getTransactionCount({ address: fromAddress, blockTag: "pending" }),
+    publicClient.estimateGas({
+      account: fromAddress,
+      to: appConfig.usdcContract,
+      data,
+      value: 0n,
+    }),
+    publicClient.estimateFeesPerGas({ type: "eip1559" }),
+  ]);
+
+  const maxFeePerGas = fees.maxFeePerGas ?? fees.gasPrice;
+  const maxPriorityFeePerGas = fees.maxPriorityFeePerGas ?? fees.gasPrice;
+  if (maxFeePerGas === undefined || maxPriorityFeePerGas === undefined) {
+    throw new Error("Could not estimate EIP-1559 fees for OWS transfer");
+  }
+
+  const txHex = serializeTransaction({
+    type: "eip1559",
+    chainId,
+    nonce,
+    to: appConfig.usdcContract,
+    data,
+    value: 0n,
+    gas,
+    maxFeePerGas,
+    maxPriorityFeePerGas,
+  });
+
+  const { txHash } = signAndSend(
+    fromWallet,
+    OWS_CHAIN_ID,
+    txHex as Hex,
+    undefined,
+    undefined,
+    appConfig.baseSepoliaRpc(),
+  );
+  if (!isRealTxHash(txHash)) {
+    throw new Error(`OWS returned invalid tx hash for ${fromWallet}: ${txHash}`);
+  }
+
+  return txHash;
+}
+
+async function transferUsdcWithPrivateKey(
   from: PrivateKeyAccount,
   toAddress: string,
   amount: number,
@@ -203,11 +321,7 @@ export async function potPayToWinner(
   }
 
   try {
-    const potSigner = getSigners().get("pot");
-    if (!potSigner) {
-      throw new Error("Missing pot signer");
-    }
-    const txHash = await transferUsdc(potSigner, getAddress(winnerId), amount);
+    const txHash = await transferUsdc("pot", getAddress(winnerId), amount);
     return buildTransactionInfo({
       from,
       to,
@@ -217,7 +331,8 @@ export async function potPayToWinner(
       action: "win",
       handNumber,
     });
-  } catch {
+  } catch (error) {
+    console.warn(`[payments] pot payout to ${winnerId} failed: ${formatError(error)}`);
     return buildTransactionInfo({
       from,
       to,
@@ -252,11 +367,7 @@ export async function agentPayToPot(
   }
 
   try {
-    const signer = getSigners().get(agentId);
-    if (!signer) {
-      throw new Error(`Missing signer for ${agentId}`);
-    }
-    const txHash = await transferUsdc(signer, getPotAddress(), amount);
+    const txHash = await transferUsdc(agentId, getPotAddress(), amount);
     return buildTransactionInfo({
       from,
       to,
@@ -266,7 +377,8 @@ export async function agentPayToPot(
       action,
       handNumber,
     });
-  } catch {
+  } catch (error) {
+    console.warn(`[payments] ${agentId} ${action} payment failed: ${formatError(error)}`);
     return buildTransactionInfo({
       from,
       to,

@@ -8,4 +8,4 @@ if [[ ! -f .env ]]; then
   cp .env.example .env
   echo "Created .env — edit with your keys and wallet material."
 fi
-echo "Done. Next: bash scripts/create-wallets.sh (requires OWS), fund wallets, npm run dev"
+echo "Done. Next: ensure ~/.ows/bin is on PATH (source ~/.zshrc after OWS install), bash scripts/create-wallets.sh, fund wallets, npm run dev"

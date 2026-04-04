@@ -2,7 +2,8 @@
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-export PATH="$REPO_ROOT/node_modules/.bin:$PATH"
+# Prefer global OWS from install.sh (~/.ows/bin), then npm workspace CLI
+export PATH="${HOME}/.ows/bin:$REPO_ROOT/node_modules/.bin:$PATH"
 
 if ! command -v ows &>/dev/null; then
   echo "ows CLI not found. Run: npm install (from repo root)"

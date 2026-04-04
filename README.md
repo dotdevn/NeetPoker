@@ -6,14 +6,15 @@ Six foundation models, identical prompts, real USDC microbets on Base Sepolia vi
 
 ## Quick start
 
-1. Install [OWS](https://github.com/open-wallet-standard/core): `curl -fsSL https://docs.openwallet.sh/install.sh | bash`
+1. Install OWS CLI: `curl -fsSL https://docs.openwallet.sh/install.sh | bash` — then `source ~/.zshrc` (or `export PATH="$HOME/.ows/bin:$PATH"`). See [Open Wallet Standard](https://openwallet.sh/).
 2. Node.js 22+
 3. `cp .env.example .env` and fill secrets (LLM keys, wallet addresses, private keys for testnet)
 4. `bash scripts/create-wallets.sh` if you need wallets created (see script output)
 5. Fund each agent wallet with Base Sepolia USDC ([Circle faucet](https://faucet.circle.com))
 6. `npm install`
-7. `npm run dev` — API on `http://localhost:8000`, dashboard on `http://localhost:5173`
-8. `curl -X POST http://localhost:8000/game/start -H "X-Admin-Token: $GAME_ADMIN_TOKEN"` to begin a tournament
+7. Optional: `npm run check-balances` — runs `ows fund balance` per agent (set `OWS_FUND_BALANCE_CHAIN=eip155:84532` in `.env` for Base Sepolia; CLI default is Base mainnet)
+8. `npm run dev` — API on `http://localhost:8000`, dashboard on `http://localhost:5173`
+9. `curl -X POST http://localhost:8000/game/start -H "X-Admin-Token: $GAME_ADMIN_TOKEN"` to begin a tournament
 
 Game-control endpoints now require an admin token. Set `GAME_ADMIN_TOKEN` in `.env` and pass it as `X-Admin-Token` (or `Authorization: Bearer ...`) for mutating `/game/*` requests.
 
@@ -28,6 +29,28 @@ If blind/payout payments keep failing at runtime, the server degrades the tourna
 For a watchable demo pace, increase delays in `.env`:
 - `HAND_DELAY_MS=5000`
 - `ACTION_DELAY_MS=3000`
+
+## OWS wallet setup
+
+**Wallet names must match these agent IDs exactly:** `gpt`, `claude`, `gemini`, `grok`, `mistral`, `deepseek`, and `pot` (house pot).
+
+1. **PATH** — After installing OWS (`curl -fsSL https://docs.openwallet.sh/install.sh | bash`), ensure `~/.ows/bin` is on your `PATH` (e.g. `source ~/.zshrc` or `export PATH="$HOME/.ows/bin:$PATH"`).
+
+2. **Import** — Never commit or paste keys into issues/chat.
+
+   ```bash
+   export PATH="$HOME/.ows/bin:$PATH"
+   # Interactive: CLI prompts for the private key
+   ows wallet import --name claude --private-key --chain ethereum
+   ```
+
+   Non-interactive (documented by OWS): set `OWS_PRIVATE_KEY` to the hex key, then run the same import command. Prefer a private shell session; clear the variable afterward.
+
+3. **Verify** — `ows wallet list` and confirm the **Ethereum / `eip155`** address is the one you intend for that agent on Base Sepolia.
+
+4. **Wrong key on a name** — `ows wallet delete --wallet <name> --confirm`, then import again.
+
+**Security:** The OWS vault under `~/.ows` is hot-wallet territory. Do not commit vault data; rotate keys if exposed.
 
 ## LLM Routing
 

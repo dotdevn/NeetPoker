@@ -286,6 +286,8 @@ export async function runTournamentLoop(): Promise<void> {
   running = true;
   shouldStop = false;
   runAbort = new AbortController();
+  const ABSOLUTE_MAX_DURATION_MS = 30 * 60 * 1000;
+  const loopStartTime = Date.now();
 
   try {
     // Notify frontend that we're using real payments.
@@ -305,6 +307,11 @@ export async function runTournamentLoop(): Promise<void> {
     });
     // #endregion
     while (!shouldStop) {
+      if (Date.now() - loopStartTime > ABSOLUTE_MAX_DURATION_MS) {
+        console.log("⚠️ Absolute max game duration (30min) reached — stopping to protect credits.");
+        break;
+      }
+
       const winner = engine.tournamentWinner();
       if (winner) {
         broadcast({
@@ -341,7 +348,7 @@ export async function runTournamentLoop(): Promise<void> {
         if (sbTx.status === "failed") {
           broadcast({
             type: "error",
-            message: `${smallBlindId}: blind payment failed after retry/degrade fallback`,
+            message: `${smallBlindId}: blind payment failed after retries`,
           });
         } else {
           addTransacted(sbPreview.amount);
@@ -369,7 +376,7 @@ export async function runTournamentLoop(): Promise<void> {
         if (bbTx.status === "failed") {
           broadcast({
             type: "error",
-            message: `${bigBlindId}: blind payment failed after retry/degrade fallback`,
+            message: `${bigBlindId}: blind payment failed after retries`,
           });
         } else {
           addTransacted(bbPreview.amount);

@@ -131,7 +131,7 @@ This is the most technically nuanced part of the integration, and it's worth thi
 **Option A: Export the private key from OWS**
 
 ```bash
-ows wallet export --wallet gpt --format raw-evm
+ows wallet export --wallet gpt
 ```
 
 This gives you a hex private key you pass to `privateKeyToAccount`. Simple, works immediately, gets the demo running. The security model is weakened — the key is now in your environment — but for a hackathon with testnet funds, this is the pragmatic choice. The keys are protecting $10 of testnet USDC, not production funds.
@@ -744,10 +744,10 @@ X402_FACILITATOR_URL=https://x402.org/facilitator
 # After running scripts/create-wallets.sh, fill these in
 # ─────────────────────────────────────────────
 GROK_WALLET_ADDRESS=0x...
-GROK_PRIVATE_KEY=0x...    # Export from OWS: ows wallet export --wallet grok --format raw-evm
+GROK_PRIVATE_KEY=0x...    # Export from OWS: ows wallet export --wallet grok
 
 GPT_WALLET_ADDRESS=0x...
-GPT_PRIVATE_KEY=0x...    # ows wallet export --wallet gpt --format raw-evm
+GPT_PRIVATE_KEY=0x...    # ows wallet export --wallet gpt
 
 GEMINI_WALLET_ADDRESS=0x...
 GEMINI_PRIVATE_KEY=0x...
@@ -1011,13 +1011,13 @@ ows wallet list
 
 # Export private keys for x402 viem signing
 # (testnet only — see §3b for why this is acceptable)
-ows wallet export --wallet grok --format raw-evm
-ows wallet export --wallet gpt --format raw-evm
-ows wallet export --wallet gemini --format raw-evm
-ows wallet export --wallet claude --format raw-evm
-ows wallet export --wallet mistral --format raw-evm
-ows wallet export --wallet deepseek --format raw-evm
-ows wallet export --wallet pot --format raw-evm
+ows wallet export --wallet grok
+ows wallet export --wallet gpt
+ows wallet export --wallet gemini
+ows wallet export --wallet claude
+ows wallet export --wallet mistral
+ows wallet export --wallet deepseek
+ows wallet export --wallet pot
 # Copy each private key — paste into .env file
 ```
 
@@ -1198,7 +1198,7 @@ Then, if you have time: "The benchmark is still running. [Model X] is ahead righ
 
 **Why it happens**: Private key export from OWS produced unexpected format, or `.env` values were pasted incorrectly (missing `0x` prefix, or wrong wallet mapped to wrong key).
 
-**Quick fix**: Re-run `ows wallet export --wallet gpt --format raw-evm` and verify the key starts with `0x`. Paste raw into `.env`. Verify with a quick Node.js snippet: `node -e "const {privateKeyToAccount} = require('viem/accounts'); console.log(privateKeyToAccount('${KEY}').address)"` — it should print the correct wallet address.
+**Quick fix**: Re-run `ows wallet export --wallet gpt` and verify the key starts with `0x`. Paste raw into `.env`. Verify with a quick Node.js snippet: `node -e "const {privateKeyToAccount} = require('viem/accounts'); console.log(privateKeyToAccount('${KEY}').address)"` — it should print the correct wallet address.
 
 **Backstop**: Generate fresh EVM wallets directly with viem (no OWS needed) using `generatePrivateKey()` from `viem/accounts`. Fund those wallets from the faucet. This bypasses OWS entirely — mention it to judges as "we ran into OWS key format issues but here's how we'd integrate properly in production."
 
