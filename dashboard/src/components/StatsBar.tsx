@@ -67,7 +67,7 @@ export function StatsBar(props: {
         <LeaderboardPopover gameState={props.gameState} handHistory={props.hands} />
       </div>
       <div className="flex items-center gap-2 font-mono text-sm shrink-0">
-        <span className="text-stack">${props.totalTransacted.toFixed(2)} total USDC (est.)</span>
+        <span className="text-stack">${props.totalTransacted.toFixed(2)} total USDC</span>
         {props.paymentMode === "mock_degraded" ? (
           <span className="rounded border border-amber-300/60 bg-amber-500/10 px-2 py-1 text-[11px] text-amber-200">
             PAYMENTS: MOCK DEGRADED
