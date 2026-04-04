@@ -242,6 +242,15 @@ async function main(): Promise<void> {
   const app = express();
   app.use(helmet());
 
+  // Log incoming requests for debugging Railway routing
+  app.use((req, _res, next) => {
+    console.log(`[HTTP] ${req.method} ${req.path}`);
+    next();
+  });
+
+  // Explicit healthcheck for root path
+  app.get("/", (_req, res) => res.send("OK"));
+
   // CORS MUST run before any rate limiters so preflights don't fail cross-origin
   app.use((req, res, next) => {
     const origin = typeof req.headers.origin === "string" ? req.headers.origin : "";
