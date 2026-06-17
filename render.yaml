@@ -3,7 +3,7 @@ services:
     name: neetpoker-server
     runtime: node
     plan: free
-    buildCommand: npm install && npm run build -w server
+    buildCommand: npm install --include=dev && npm run build -w server
     startCommand: node server/dist/index.js
     healthCheckPath: /health
     envVars:
