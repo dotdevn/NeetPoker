@@ -617,7 +617,7 @@ async function main(): Promise<void> {
     });
   });
 
-  server.listen(appConfig.port, () => {
+  server.listen(appConfig.port, "0.0.0.0", () => {
     const addr = server.address();
     if (addr && typeof addr !== "string") {
       const info = addr as AddressInfo;

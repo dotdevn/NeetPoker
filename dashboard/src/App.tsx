@@ -133,6 +133,15 @@ export default function App() {
           onToggleTurbo={toggleTurbo}
           onStop={stopGame}
         />
+        {!socket.connected && (
+          <motion.div
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="border-y border-amber-300/20 bg-amber-400/10 px-3 py-2 text-center font-mono text-xs uppercase tracking-[0.22em] text-amber-200"
+          >
+            Connecting to backend. Free host may be waking up; this can take about a minute.
+          </motion.div>
+        )}
         <div className="grid min-h-0 min-w-0 flex-1 grid-cols-[minmax(0,1fr)_minmax(360px,420px)] grid-rows-[minmax(0,1fr)_minmax(200px,30vh)] gap-2 overflow-hidden p-2">
           <div className="min-h-0 min-w-0 overflow-hidden rounded-lg border border-white/10">
             <PokerTable gameState={socket.gameState} latestActions={socket.latestActions} />

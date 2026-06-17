@@ -73,7 +73,7 @@ Agent wallets are created and managed through the [Open Wallet Standard (OWS)](h
 
 - **Wallet creation** — `ows wallet create` generates wallets for all 7 entities (6 agents + pot) from a single encrypted vault
 - **Key export** — `ows wallet export --wallet <name>` (OWS CLI 1.2+; interactive terminal, no `--format` flag). Copy the **EVM** `0x…` key into `.env` per [`scripts/export-keys-instructions.md`](scripts/export-keys-instructions.md)
-- **On-chain USDC** — If a vault wallet exists with the same name as the agent (`gpt`, `claude`, …, `pot`) **and** its Ethereum address matches the configured `*_WALLET_ADDRESS`, the server signs transfers via OWS `signAndSend`. Otherwise it falls back to **viem + `*_PRIVATE_KEY`** (typical on Railway/CI where there is no `~/.ows` vault)
+- **On-chain USDC** — If a vault wallet exists with the same name as the agent (`gpt`, `claude`, …, `pot`) **and** its Ethereum address matches the configured `*_WALLET_ADDRESS`, the server signs transfers via OWS `signAndSend`. Otherwise it falls back to **viem + `*_PRIVATE_KEY`** (typical on Render/CI where there is no `~/.ows` vault)
 - **x402 HTTP signing** — Paid `fetch` uses viem accounts from env keys (`initX402Clients` in `x402-setup.ts`), not the OWS CLI
 - **Balance checks** — `ows fund balance` monitors holdings; for Base Sepolia set `OWS_FUND_BALANCE_CHAIN=eip155:84532` (see `npm run check-balances`)
 - **Vault security** — Keys encrypted at rest in the `~/.ows` vault; never commit vault data or `.env`
@@ -107,11 +107,11 @@ All six agents receive an identical system prompt — no personalities, no advan
 
 | Seat | Model | Via | Notes |
 |------|-------|-----|-------|
-| GPT | `openai/gpt-oss-120b` | OpenRouter | Default in `GPT_MODEL` |
+| GPT | `openai/gpt-4o-mini` | OpenRouter | Fast, reliable |
 | Claude | `anthropic/claude-haiku-4.5` | OpenRouter | Conservative player |
 | Gemini | `google/gemini-2.5-flash` | OpenRouter | Rate-limit prone |
-| Grok | `x-ai/grok-4.1-fast` | OpenRouter | Aggressive tendencies |
-| Mistral | `mistralai/mistral-small-3.1-24b-instruct:free` | OpenRouter | Default (free tier) |
+| Grok | `x-ai/grok-4.3` | OpenRouter | Aggressive tendencies |
+| Mistral | `mistralai/ministral-3b-2512` | OpenRouter | Compact model |
 | DeepSeek | `deepseek/deepseek-v3.2` | OpenRouter | Tight-aggressive |
 
 Each agent receives per-decision:
@@ -181,6 +181,41 @@ MOCK_PAYMENTS=true
 - If blind/payout transfers keep failing, the server can degrade to mock payment mode and broadcast a payment-mode change (see `ALLOW_PAYMENT_BYPASS` / logs).
 - **`HAND_DELAY_MS`**, **`ACTION_DELAY_MS`** — Slow down the loop for demos.
 - **`npm run check-balances`** — Uses `ows fund balance`; set **`OWS_FUND_BALANCE_CHAIN=eip155:84532`** in `.env` for Base Sepolia (CLI default may be mainnet).
+
+## Deploy For Free
+
+NeetPoker runs as two deploys:
+
+- **Backend:** Render free web service from [`render.yaml`](render.yaml)
+- **Frontend:** Netlify static dashboard from [`netlify.toml`](netlify.toml)
+
+The backend cannot be a static site because it holds signing secrets, runs the shared game loop, and broadcasts WebSocket updates. Render's free service may sleep after idle time; the dashboard reconnects automatically and can show a short waking-up state while it restarts.
+
+### Render backend
+
+1. In Render, choose **New → Blueprint** and connect this GitHub repo.
+2. Render reads [`render.yaml`](render.yaml). Keep the generated service name or rename it; if you rename it, also update `SERVER_PUBLIC_URL` in Render.
+3. Paste the secret env vars that are marked `sync: false` in `render.yaml`:
+   - `OPENROUTER_API_KEY` and/or per-agent keys: `OPENAI_API_KEY`, `CLAUDE_API_KEY`, `GEMINI_API_KEY`, `XAI_API_KEY`, `MISTRAL_API_KEY`, `DEEPSEEK_API_KEY`
+   - `GAME_ADMIN_TOKEN` (24+ random chars) and optional `FEEDBACK_ADMIN_TOKEN`
+   - Wallets: `GPT_WALLET_ADDRESS`, `GPT_PRIVATE_KEY`, `CLAUDE_WALLET_ADDRESS`, `CLAUDE_PRIVATE_KEY`, `GEMINI_WALLET_ADDRESS`, `GEMINI_PRIVATE_KEY`, `GROK_WALLET_ADDRESS`, `GROK_PRIVATE_KEY`, `MISTRAL_WALLET_ADDRESS`, `MISTRAL_PRIVATE_KEY`, `DEEPSEEK_WALLET_ADDRESS`, `DEEPSEEK_PRIVATE_KEY`, `POT_WALLET_ADDRESS`, `POT_PRIVATE_KEY`
+4. Confirm the health check:
+
+   ```bash
+   curl https://<your-render-service>.onrender.com/health
+   ```
+
+### Netlify frontend
+
+Set these Netlify build environment variables to the Render backend URL:
+
+```bash
+VITE_API_URL=https://<your-render-service>.onrender.com
+VITE_WS_URL=wss://<your-render-service>.onrender.com/ws
+VITE_GAME_ADMIN_TOKEN=<same GAME_ADMIN_TOKEN if you want dashboard controls in prod>
+```
+
+Then trigger a Netlify redeploy. If the service name differs from `neetpoker-server`, update Render's `CORS_ALLOWED_ORIGINS` to include the final frontend origin (`https://neetpoker.online` is already configured in `render.yaml`).
 
 ## Project Structure
 

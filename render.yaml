@@ -1,0 +1,115 @@
+services:
+  - type: web
+    name: neetpoker-server
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build -w server
+    startCommand: node server/dist/index.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NODE_ENV
+        value: production
+      - key: SERVER_PUBLIC_URL
+        value: https://neetpoker-server.onrender.com
+      - key: CORS_ALLOWED_ORIGINS
+        value: https://neetpoker.online
+      - key: X402_FACILITATOR_URL
+        value: https://facilitator.x402.org
+      - key: BASE_SEPOLIA_RPC
+        value: https://sepolia.base.org
+      - key: OPENAI_BASE_URL
+        value: https://openrouter.ai/api/v1
+      - key: CLAUDE_BASE_URL
+        value: https://openrouter.ai/api/v1
+      - key: GEMINI_BASE_URL
+        value: https://openrouter.ai/api/v1
+      - key: GROK_BASE_URL
+        value: https://openrouter.ai/api/v1
+      - key: MISTRAL_BASE_URL
+        value: https://openrouter.ai/api/v1
+      - key: DEEPSEEK_BASE_URL
+        value: https://openrouter.ai/api/v1
+      - key: GPT_MODEL
+        value: openai/gpt-4o-mini
+      - key: CLAUDE_MODEL
+        value: anthropic/claude-haiku-4.5
+      - key: GEMINI_MODEL
+        value: google/gemini-2.5-flash
+      - key: GROK_MODEL
+        value: x-ai/grok-4.3
+      - key: MISTRAL_MODEL
+        value: mistralai/ministral-3b-2512
+      - key: DEEPSEEK_MODEL
+        value: deepseek/deepseek-v3.2
+      - key: STARTING_STACK
+        value: "10"
+      - key: SMALL_BLIND
+        value: "0.05"
+      - key: BIG_BLIND
+        value: "0.1"
+      - key: HAND_DELAY_MS
+        value: "5000"
+      - key: ACTION_DELAY_MS
+        value: "3000"
+      - key: LLM_TIMEOUT_MS
+        value: "12000"
+      - key: PAYMENT_RETRY_COUNT
+        value: "1"
+      - key: PAYMENT_RETRY_TIMEOUT_MS
+        value: "1500"
+      - key: MONTE_CARLO_SIMS
+        value: "500"
+      - key: MOCK_PAYMENTS
+        value: "false"
+      - key: ALLOW_PAYMENT_BYPASS
+        value: "false"
+      - key: ENABLE_MANUAL_ACTION_API
+        value: "0"
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: CLAUDE_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: XAI_API_KEY
+        sync: false
+      - key: MISTRAL_API_KEY
+        sync: false
+      - key: DEEPSEEK_API_KEY
+        sync: false
+      - key: GAME_ADMIN_TOKEN
+        sync: false
+      - key: FEEDBACK_ADMIN_TOKEN
+        sync: false
+      - key: GPT_WALLET_ADDRESS
+        sync: false
+      - key: GPT_PRIVATE_KEY
+        sync: false
+      - key: CLAUDE_WALLET_ADDRESS
+        sync: false
+      - key: CLAUDE_PRIVATE_KEY
+        sync: false
+      - key: GEMINI_WALLET_ADDRESS
+        sync: false
+      - key: GEMINI_PRIVATE_KEY
+        sync: false
+      - key: GROK_WALLET_ADDRESS
+        sync: false
+      - key: GROK_PRIVATE_KEY
+        sync: false
+      - key: MISTRAL_WALLET_ADDRESS
+        sync: false
+      - key: MISTRAL_PRIVATE_KEY
+        sync: false
+      - key: DEEPSEEK_WALLET_ADDRESS
+        sync: false
+      - key: DEEPSEEK_PRIVATE_KEY
+        sync: false
+      - key: POT_WALLET_ADDRESS
+        sync: false
+      - key: POT_PRIVATE_KEY
+        sync: false
